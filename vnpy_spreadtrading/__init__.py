@@ -24,12 +24,7 @@ from pathlib import Path
 
 import importlib_metadata
 from vnpy.trader.app import BaseApp
-from vnpy.trader.object import (
-    OrderData,
-    TradeData,
-    TickData,
-    BarData
-)
+from vnpy.trader.object import OrderData, TradeData, TickData, BarData
 
 from .engine import (
     SpreadEngine,
@@ -37,7 +32,7 @@ from .engine import (
     SpreadData,
     LegData,
     SpreadStrategyTemplate,
-    SpreadAlgoTemplate
+    SpreadAlgoTemplate,
 )
 
 
@@ -53,7 +48,7 @@ class SpreadTradingApp(BaseApp):
     app_name: str = APP_NAME
     app_module: str = __module__
     app_path: Path = Path(__file__).parent
-    display_name: str = "价差交易"
+    display_name: str = "Spread Trading"
     engine_class: SpreadEngine = SpreadEngine
     widget_name: str = "SpreadManager"
     icon_name: str = str(app_path.joinpath("ui", "spread.ico"))

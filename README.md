@@ -1,4 +1,4 @@
-# VeighNa框架的价差交易模块
+# Spread Trading Module for VeighNa Framework
 
 <p align="center">
   <img src ="https://vnpy.oss-cn-shanghai.aliyuncs.com/vnpy-logo.png"/>
@@ -11,27 +11,27 @@
     <img src ="https://img.shields.io/github/license/vnpy/vnpy.svg?color=orange"/>
 </p>
 
-## 说明
+## Description
 
-针对多条合约腿价差交易设计的应用模块，覆盖价差盘口计算、价差算法执行、价差策略开发的全流程业务功能。
+An application module designed for multi-contract leg spread trading, covering the whole process of business functions such as spread order calculation, spread algorithm execution and spread strategy development.
 
-## 注意
+## Note
 
-不支持使用交易所套利单组成的价差交易合约。
+Spread trading contracts using exchange arbitrage orders are not supported.
 
-## 安装
+## Installation
 
-安装环境推荐基于3.3.0版本以上的【[**VeighNa Studio**](https://www.vnpy.com)】。
+The installation environment is recommended to be based on [[**VeighNa Studio**](https://edarchimbaud.com/veighna-website)] above version 3.3.0.
 
-直接使用pip命令：
+Use the pip command directly:
 
-```
+```bash
 pip install vnpy_spreadtrading
 ```
 
 
-或者下载源代码后，解压后在cmd中运行：
+Or download the source code, unzip it and run it in cmd:
 
-```
+```bash
 pip install .
 ```

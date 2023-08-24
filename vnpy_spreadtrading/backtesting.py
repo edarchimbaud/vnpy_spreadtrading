@@ -9,29 +9,17 @@ from pandas import DataFrame
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from vnpy.trader.constant import (
-    Direction,
-    Offset,
-    Exchange,
-    Interval,
-    Status
-)
+from vnpy.trader.constant import Direction, Offset, Exchange, Interval, Status
 from vnpy.trader.object import TradeData, BarData, TickData
 from vnpy.trader.optimize import (
     OptimizationSetting,
     check_optimization_setting,
     run_bf_optimization,
-    run_ga_optimization
+    run_ga_optimization,
 )
 
 from .template import SpreadStrategyTemplate, SpreadAlgoTemplate
-from .base import (
-    SpreadData,
-    BacktestingMode,
-    load_bar_data,
-    load_tick_data,
-    EngineType
-)
+from .base import SpreadData, BacktestingMode, load_bar_data, load_tick_data, EngineType
 
 
 INTERVAL_DELTA_MAP: Dict[Interval, timedelta] = {
@@ -120,7 +108,7 @@ class BacktestingEngine:
         pricetick: float,
         capital: int = 0,
         end: datetime = None,
-        mode: BacktestingMode = BacktestingMode.BAR
+        mode: BacktestingMode = BacktestingMode.BAR,
     ) -> None:
         """"""
         self.spread = spread
@@ -139,21 +127,18 @@ class BacktestingEngine:
         self.strategy_class = strategy_class
 
         self.strategy = strategy_class(
-            self,
-            strategy_class.__name__,
-            self.spread,
-            setting
+            self, strategy_class.__name__, self.spread, setting
         )
 
     def load_data(self) -> None:
         """"""
-        self.output("开始加载历史数据")
+        self.output("Start loading historical data.")
 
         if not self.end:
             self.end = datetime.now()
 
         if self.start >= self.end:
-            self.output("起始日期必须小于结束日期")
+            self.output("The start date must be less than the end date.")
             return
 
         if self.mode == BacktestingMode.BAR:
@@ -163,16 +148,14 @@ class BacktestingEngine:
                 start=self.start,
                 end=self.end,
                 pricetick=self.pricetick,
-                backtesting=True
+                backtesting=True,
             )
         else:
-            self.history_data = load_tick_data(
-                self.spread,
-                self.start,
-                self.end
-            )
+            self.history_data = load_tick_data(self.spread, self.start, self.end)
 
-        self.output(f"历史数据加载完成，数据量：{len(self.history_data)}")
+        self.output(
+            f"History data load complete, amount of data: {len(self.history_data)}"
+        )
 
     def run_backtesting(self) -> None:
         """"""
@@ -183,28 +166,28 @@ class BacktestingEngine:
 
         self.strategy.on_init()
         self.strategy.inited = True
-        self.output("策略初始化完成")
+        self.output("Strategy initialization complete.")
 
         self.strategy.on_start()
         self.strategy.trading = True
-        self.output("开始回放历史数据")
+        self.output("Start playing back historical data.")
 
         for data in self.history_data:
             try:
                 func(data)
             except Exception:
-                self.output("触发异常，回测终止")
+                self.output("Trigger exception, backtest terminated.")
                 self.output(traceback.format_exc())
                 return
 
-        self.output("历史数据回放结束")
+        self.output("End of historical data playback.")
 
     def calculate_result(self) -> DataFrame:
         """"""
-        self.output("开始计算逐日盯市盈亏")
+        self.output("Begin calculating the day-to-day market watch profit/loss.")
 
         if not self.trades:
-            self.output("回测成交记录为空")
+            self.output("The backtest trade record is empty.")
 
         # Add trade data into daily reuslt.
         for trade in self.trades.values():
@@ -218,11 +201,7 @@ class BacktestingEngine:
 
         for daily_result in self.daily_results.values():
             daily_result.calculate_pnl(
-                pre_close,
-                start_pos,
-                self.size,
-                self.rate,
-                self.slippage
+                pre_close, start_pos, self.size, self.rate, self.slippage
             )
 
             pre_close = daily_result.close_price
@@ -237,12 +216,12 @@ class BacktestingEngine:
 
         self.daily_df: DataFrame = DataFrame.from_dict(results).set_index("date")
 
-        self.output("逐日盯市盈亏计算完成")
+        self.output("Day-to-day market watch profit/loss calculations completed.")
         return self.daily_df
 
     def calculate_statistics(self, df: DataFrame = None, output=True) -> dict:
         """"""
-        self.output("开始计算策略统计指标")
+        self.output("Begin calculating strategy statistics metrics.")
 
         # Check DataFrame input exterior
         if df is None:
@@ -284,8 +263,7 @@ class BacktestingEngine:
             df["balance"] = df["net_pnl"].cumsum() + self.capital
             df["return"] = np.log(df["balance"] / df["balance"].shift(1)).fillna(0)
             df["highlevel"] = (
-                df["balance"].rolling(
-                    min_periods=1, window=len(df), center=False).max()
+                df["balance"].rolling(min_periods=1, window=len(df), center=False).max()
             )
             df["drawdown"] = df["balance"] - df["highlevel"]
             df["ddpercent"] = df["drawdown"] / df["highlevel"] * 100
@@ -293,7 +271,9 @@ class BacktestingEngine:
             # All balance value needs to be positive
             positive_balance = (df["balance"] > 0).all()
             if not positive_balance:
-                self.output("回测中出现爆仓（资金小于等于0），无法计算策略统计指标")
+                self.output(
+                    "Burst positions (funds less than or equal to 0) in backtesting, unable to calculate strategy stats metrics"
+                )
 
         if positive_balance:
             # Calculate statistics value
@@ -341,38 +321,38 @@ class BacktestingEngine:
         # Output
         if output:
             self.output("-" * 30)
-            self.output(f"首个交易日：\t{start_date}")
-            self.output(f"最后交易日：\t{end_date}")
+            self.output(f"Start date:\t{start_date}")
+            self.output(f"End date:\t{end_date}")
 
-            self.output(f"总交易日：\t{total_days}")
-            self.output(f"盈利交易日：\t{profit_days}")
-            self.output(f"亏损交易日：\t{loss_days}")
+            self.output(f"Total days:\t{total_days}")
+            self.output(f"Profit days:\t{profit_days}")
+            self.output(f"Loss days:\t{loss_days}")
 
-            self.output(f"起始资金：\t{self.capital:,.2f}")
-            self.output(f"结束资金：\t{end_balance:,.2f}")
+            self.output(f"Capital:\t{self.capital:,.2f}")
+            self.output(f"End balance:\t{end_balance:,.2f}")
 
-            self.output(f"总收益率：\t{total_return:,.2f}%")
-            self.output(f"年化收益：\t{annual_return:,.2f}%")
-            self.output(f"最大回撤: \t{max_drawdown:,.2f}")
-            self.output(f"百分比最大回撤: {max_ddpercent:,.2f}%")
-            self.output(f"最长回撤天数: \t{max_drawdown_duration}")
+            self.output(f"Total return:\t{total_return:,.2f}%")
+            self.output(f"Annual return:\t{annual_return:,.2f}%")
+            self.output(f"Max drawdown:\t{max_drawdown:,.2f}")
+            self.output(f"Max drawdown \%:\t{{max_ddpercent:,.2f}%")
+            self.output(f"Max drawdown duration:\t{max_drawdown_duration}")
 
-            self.output(f"总盈亏：\t{total_net_pnl:,.2f}")
-            self.output(f"总手续费：\t{total_commission:,.2f}")
-            self.output(f"总滑点：\t{total_slippage:,.2f}")
-            self.output(f"总成交金额：\t{total_turnover:,.2f}")
-            self.output(f"总成交笔数：\t{total_trade_count}")
+            self.output(f"Total net P&L:\t{total_net_pnl:,.2f}")
+            self.output(f"Total commission:\t{total_commission:,.2f}")
+            self.output(f"Total slippage:\t{total_slippage:,.2f}")
+            self.output(f"Total turnover:\t{total_turnover:,.2f}")
+            self.output(f"Total trade count:\t{total_trade_count}")
 
-            self.output(f"日均盈亏：\t{daily_net_pnl:,.2f}")
-            self.output(f"日均手续费：\t{daily_commission:,.2f}")
-            self.output(f"日均滑点：\t{daily_slippage:,.2f}")
-            self.output(f"日均成交金额：\t{daily_turnover:,.2f}")
-            self.output(f"日均成交笔数：\t{daily_trade_count}")
+            self.output(f"Daily net P&L:\t{daily_net_pnl:,.2f}")
+            self.output(f"Daily commission:\t{daily_commission:,.2f}")
+            self.output(f"Daily slippage:\t{daily_slippage:,.2f}")
+            self.output(f"Daily turnover:\t{daily_turnover:,.2f}")
+            self.output(f"Daily trade count:\t{daily_trade_count}")
 
-            self.output(f"日均收益率：\t{daily_return:,.2f}%")
-            self.output(f"收益标准差：\t{return_std:,.2f}%")
+            self.output(f"Daily return:\t{daily_return:,.2f}%")
+            self.output(f"Return std:\t{return_std:,.2f}%")
             self.output(f"Sharpe Ratio：\t{sharpe_ratio:,.2f}")
-            self.output(f"收益回撤比：\t{return_drawdown_ratio:,.2f}")
+            self.output(f"Return DD ratio\t{return_drawdown_ratio:,.2f}")
 
         statistics: dict = {
             "start_date": start_date,
@@ -419,22 +399,19 @@ class BacktestingEngine:
             rows=4,
             cols=1,
             subplot_titles=["Balance", "Drawdown", "Daily Pnl", "Pnl Distribution"],
-            vertical_spacing=0.06
+            vertical_spacing=0.06,
         )
 
         balance_line = go.Scatter(
-            x=df.index,
-            y=df["balance"],
-            mode="lines",
-            name="Balance"
+            x=df.index, y=df["balance"], mode="lines", name="Balance"
         )
         drawdown_scatter = go.Scatter(
             x=df.index,
             y=df["drawdown"],
             fillcolor="red",
-            fill='tozeroy',
+            fill="tozeroy",
             mode="lines",
-            name="Drawdown"
+            name="Drawdown",
         )
         pnl_bar = go.Bar(y=df["net_pnl"], name="Daily Pnl")
         pnl_histogram = go.Histogram(x=df["net_pnl"], nbinsx=100, name="Days")
@@ -447,7 +424,9 @@ class BacktestingEngine:
         fig.update_layout(height=1000, width=1000)
         fig.show()
 
-    def run_bf_optimization(self, optimization_setting: OptimizationSetting, output=True) -> list:
+    def run_bf_optimization(
+        self, optimization_setting: OptimizationSetting, output=True
+    ) -> list:
         """"""
         if not check_optimization_setting(optimization_setting):
             return
@@ -462,29 +441,28 @@ class BacktestingEngine:
 
         if output:
             for result in results:
-                msg: str = f"参数：{result[0]}, 目标：{result[1]}"
+                msg: str = f"Parameters: {result[0]}, Target: {result[1]}"
                 self.output(msg)
 
         return results
 
     run_optimization = run_bf_optimization
 
-    def run_ga_optimization(self, optimization_setting: OptimizationSetting, output=True) -> list:
+    def run_ga_optimization(
+        self, optimization_setting: OptimizationSetting, output=True
+    ) -> list:
         """"""
         if not check_optimization_setting(optimization_setting):
             return
 
         evaluate_func: callable = wrap_evaluate(self, optimization_setting.target_name)
         results: list = run_ga_optimization(
-            evaluate_func,
-            optimization_setting,
-            get_target_value,
-            output=self.output
+            evaluate_func, optimization_setting, get_target_value, output=self.output
         )
 
         if output:
             for result in results:
-                msg: str = f"参数：{result[0]}, 目标：{result[1]}"
+                msg: str = f"Parameters: {result[0]}, Target: {result[1]}"
                 self.output(msg)
 
         return results
@@ -539,13 +517,11 @@ class BacktestingEngine:
         for algo in list(self.active_algos.values()):
             # Check whether limit orders can be filled.
             long_cross: bool = (
-                algo.direction == Direction.LONG
-                and algo.price >= long_cross_price
+                algo.direction == Direction.LONG and algo.price >= long_cross_price
             )
 
             short_cross: bool = (
-                algo.direction == Direction.SHORT
-                and algo.price <= short_cross_price
+                algo.direction == Direction.SHORT and algo.price <= short_cross_price
             )
 
             if not long_cross and not short_cross:
@@ -607,7 +583,7 @@ class BacktestingEngine:
             start=init_start,
             end=init_end,
             pricetick=self.pricetick,
-            backtesting=True
+            backtesting=True,
         )
 
         for bar in bars:
@@ -622,11 +598,7 @@ class BacktestingEngine:
         init_end = self.start - INTERVAL_DELTA_MAP[Interval.TICK]
         init_start = self.start - timedelta(days=days)
 
-        ticks: List[TickData] = load_tick_data(
-            self.spread,
-            init_start,
-            init_end
-        )
+        ticks: List[TickData] = load_tick_data(self.spread, init_start, init_end)
 
         for tick in ticks:
             callback(callback)
@@ -643,7 +615,7 @@ class BacktestingEngine:
         payup: int,
         interval: int,
         lock: bool,
-        extra: dict
+        extra: dict,
     ) -> str:
         """"""
         self.algo_count += 1
@@ -659,7 +631,7 @@ class BacktestingEngine:
             payup,
             interval,
             lock,
-            extra
+            extra,
         )
 
         self.algos[algoid] = algo
@@ -667,11 +639,7 @@ class BacktestingEngine:
 
         return algoid
 
-    def stop_algo(
-        self,
-        strategy: SpreadStrategyTemplate,
-        algoid: str
-    ) -> None:
+    def stop_algo(self, strategy: SpreadStrategyTemplate, algoid: str) -> None:
         """"""
         if algoid not in self.active_algos:
             return
@@ -688,7 +656,7 @@ class BacktestingEngine:
         price: float,
         volume: float,
         stop: bool,
-        lock: bool
+        lock: bool,
     ) -> None:
         """"""
         pass
@@ -763,7 +731,7 @@ class DailyResult:
         start_pos: float,
         size: int,
         rate: float,
-        slippage: float
+        slippage: float,
     ) -> None:
         """"""
         # If no pre_close provided on the first day,
@@ -791,8 +759,7 @@ class DailyResult:
             self.end_pos += pos_change
 
             turnover: float = trade.volume * size * trade.value
-            self.trading_pnl += pos_change * \
-                (self.close_price - trade.price) * size
+            self.trading_pnl += pos_change * (self.close_price - trade.price) * size
             self.slippage += trade.volume * size * slippage
 
             self.turnover += turnover
@@ -815,7 +782,7 @@ def evaluate(
     pricetick: float,
     capital: int,
     end: datetime,
-    setting: dict
+    setting: dict,
 ) -> tuple:
     """
     Function for running in multiprocessing.pool
@@ -860,7 +827,7 @@ def wrap_evaluate(engine: BacktestingEngine, target_name: str) -> callable:
         engine.size,
         engine.pricetick,
         engine.capital,
-        engine.end
+        engine.end,
     )
     return func
 

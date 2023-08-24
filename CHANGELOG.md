@@ -1,34 +1,34 @@
-# 1.1.9版本
+# Version 1.1.9
 
-1. 采用轻量级数据结构，优化图形界面更新机制
-2. 价差子引擎之间的事件推送，不再经过事件引擎，降低延迟水平
-
-
-# 1.1.8版本
-
-1. 修复回测加载数据时，也优先从数据服务获取历史数据的问题，改为优先从本地数据库加载
+1. Adopt lightweight data structure, optimize GUI update mechanism
+2. Event push between spread sub-engines no longer passes through the event engine to reduce latency level
 
 
-# 1.1.7版本
+# Version 1.1.8
 
-1. 修改价差腿的持仓初始化逻辑，适配3.6.0版本框架
-
-
-# 1.1.6版本
-
-1. 改为使用OmsEngine提供的OffsetConverter组件
-2. 添加回测中统计绩效时对于爆仓情况的检查
-3. 增加调用数据服务功能时的日志输出
+1. Fixed the problem that when loading data for backtesting, the historical data is also prioritized from the data service, so that it is prioritized to be loaded from the local database instead.
 
 
-# 1.1.5版本
+# Version 1.1.7
 
-1. 使用zoneinfo替换pytz库
-2. 调整安装脚本setup.cfg，添加Python版本限制
+1. Modify the position initialization logic of spread legs to fit the 3.6.0 framework.
 
 
-# 1.1.4版本
+# Version 1.1.6
 
-1. 将模块的图标文件信息，改为完整路径字符串
-2. 回测引擎增加暴力穷举和遗传算法的参数优化算法支持
-3. SpreadData增加可选参数complie_formula，用于支持回测优化时的公式不编译
+1. Change to use OffsetConverter component provided by OmsEngine.
+2. Add the check for burst position when counting performance in backtesting.
+3. Add log output when calling data service function.
+
+
+# Version 1.1.5
+
+1. Replace pytz library with zoneinfo. 2. adjust the installation script setup.
+2. Adjust the installation script setup.cfg to add Python version restriction.
+
+
+# Version 1.1.4
+
+1. Change the icon file information of module to full path string.
+2. Add support for parameter optimization algorithms such as Violent Exhaustion and Genetic Algorithm to the backtesting engine.
+3. Add optional parameter complie_formula to SpreadData to support non-compilation of formulas for backtest optimization.

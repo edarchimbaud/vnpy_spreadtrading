@@ -6,14 +6,14 @@ from vnpy_spreadtrading import (
     OrderData,
     TradeData,
     TickData,
-    BarData
+    BarData,
 )
 
 
 class StatisticalArbitrageStrategy(SpreadStrategyTemplate):
     """"""
 
-    author = "用Python的交易员"
+    author = "Trader in Python."
 
     boll_window = 20
     boll_dev = 2
@@ -26,31 +26,14 @@ class StatisticalArbitrageStrategy(SpreadStrategyTemplate):
     boll_down = 0.0
     boll_mid = 0.0
 
-    parameters = [
-        "boll_window",
-        "boll_dev",
-        "max_pos",
-        "payup",
-        "interval"
-    ]
-    variables = [
-        "spread_pos",
-        "boll_up",
-        "boll_down",
-        "boll_mid"
-    ]
+    parameters = ["boll_window", "boll_dev", "max_pos", "payup", "interval"]
+    variables = ["spread_pos", "boll_up", "boll_down", "boll_mid"]
 
     def __init__(
-        self,
-        strategy_engine,
-        strategy_name: str,
-        spread: SpreadData,
-        setting: dict
+        self, strategy_engine, strategy_name: str, spread: SpreadData, setting: dict
     ):
         """"""
-        super().__init__(
-            strategy_engine, strategy_name, spread, setting
-        )
+        super().__init__(strategy_engine, strategy_name, spread, setting)
 
         self.bg = BarGenerator(self.on_spread_bar)
         self.am = ArrayManager()
@@ -59,7 +42,7 @@ class StatisticalArbitrageStrategy(SpreadStrategyTemplate):
         """
         Callback when strategy is inited.
         """
-        self.write_log("策略初始化")
+        self.write_log("Strategy initialized")
 
         self.load_bar(10)
 
@@ -67,13 +50,13 @@ class StatisticalArbitrageStrategy(SpreadStrategyTemplate):
         """
         Callback when strategy is started.
         """
-        self.write_log("策略启动")
+        self.write_log("Strategy activated")
 
     def on_stop(self):
         """
         Callback when strategy is stopped.
         """
-        self.write_log("策略停止")
+        self.write_log("Strategy stopped")
 
         self.put_event()
 
@@ -101,8 +84,7 @@ class StatisticalArbitrageStrategy(SpreadStrategyTemplate):
             return
 
         self.boll_mid = self.am.sma(self.boll_window)
-        self.boll_up, self.boll_down = self.am.boll(
-            self.boll_window, self.boll_dev)
+        self.boll_up, self.boll_down = self.am.boll(self.boll_window, self.boll_dev)
 
         if not self.spread_pos:
             if bar.close_price >= self.boll_up:
@@ -110,14 +92,14 @@ class StatisticalArbitrageStrategy(SpreadStrategyTemplate):
                     bar.close_price - 10,
                     self.max_pos,
                     payup=self.payup,
-                    interval=self.interval
+                    interval=self.interval,
                 )
             elif bar.close_price <= self.boll_down:
                 self.start_long_algo(
                     bar.close_price + 10,
                     self.max_pos,
                     payup=self.payup,
-                    interval=self.interval
+                    interval=self.interval,
                 )
         elif self.spread_pos < 0:
             if bar.close_price <= self.boll_mid:
@@ -125,7 +107,7 @@ class StatisticalArbitrageStrategy(SpreadStrategyTemplate):
                     bar.close_price + 10,
                     abs(self.spread_pos),
                     payup=self.payup,
-                    interval=self.interval
+                    interval=self.interval,
                 )
         else:
             if bar.close_price >= self.boll_mid:
@@ -133,7 +115,7 @@ class StatisticalArbitrageStrategy(SpreadStrategyTemplate):
                     bar.close_price - 10,
                     abs(self.spread_pos),
                     payup=self.payup,
-                    interval=self.interval
+                    interval=self.interval,
                 )
 
         self.put_event()

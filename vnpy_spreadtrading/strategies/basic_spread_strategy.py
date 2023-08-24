@@ -5,14 +5,14 @@ from vnpy_spreadtrading import (
     SpreadAlgoTemplate,
     SpreadData,
     OrderData,
-    TradeData
+    TradeData,
 )
 
 
 class BasicSpreadStrategy(SpreadStrategyTemplate):
     """"""
 
-    author = "用Python的交易员"
+    author = "Trader in Python."
 
     buy_price = 0.0
     sell_price = 0.0
@@ -38,7 +38,7 @@ class BasicSpreadStrategy(SpreadStrategyTemplate):
         "short_price",
         "max_pos",
         "payup",
-        "interval"
+        "interval",
     ]
     variables = [
         "spread_pos",
@@ -50,16 +50,10 @@ class BasicSpreadStrategy(SpreadStrategyTemplate):
     ]
 
     def __init__(
-        self,
-        strategy_engine,
-        strategy_name: str,
-        spread: SpreadData,
-        setting: dict
+        self, strategy_engine, strategy_name: str, spread: SpreadData, setting: dict
     ):
         """"""
-        super().__init__(
-            strategy_engine, strategy_name, spread, setting
-        )
+        super().__init__(strategy_engine, strategy_name, spread, setting)
 
         self.start_t = datetime.strptime(self.start_time, "%H:%M:%S").time()
         self.end_t = datetime.strptime(self.end_time, "%H:%M:%S").time()
@@ -68,19 +62,19 @@ class BasicSpreadStrategy(SpreadStrategyTemplate):
         """
         Callback when strategy is inited.
         """
-        self.write_log("策略初始化")
+        self.write_log("Strategy initialized")
 
     def on_start(self):
         """
         Callback when strategy is started.
         """
-        self.write_log("策略启动")
+        self.write_log("Strategy activated")
 
     def on_stop(self):
         """
         Callback when strategy is stopped.
         """
-        self.write_log("策略停止")
+        self.write_log("Strategy stopped")
 
         self.update_time = None
         self.buy_algoid = ""
@@ -135,8 +129,7 @@ class BasicSpreadStrategy(SpreadStrategyTemplate):
             # Start cover close algo
             if not self.cover_algoid:
                 self.cover_algoid = self.start_long_algo(
-                    self.cover_price, abs(
-                        self.spread_pos), self.payup, self.interval
+                    self.cover_price, abs(self.spread_pos), self.payup, self.interval
                 )
 
         self.put_event()

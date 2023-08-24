@@ -2,9 +2,7 @@ from collections import defaultdict
 from typing import Dict, List, Set, Callable, TYPE_CHECKING, Optional
 from copy import copy
 
-from vnpy.trader.object import (
-    TickData, TradeData, OrderData, ContractData, BarData
-)
+from vnpy.trader.object import TickData, TradeData, OrderData, ContractData, BarData
 from vnpy.trader.constant import Direction, Status, Offset, Interval
 from vnpy.trader.utility import virtual, floor_to, ceil_to, round_to
 
@@ -18,6 +16,7 @@ class SpreadAlgoTemplate:
     """
     Template for implementing spread trading algos.
     """
+
     algo_name: str = "AlgoTemplate"
 
     def __init__(
@@ -31,7 +30,7 @@ class SpreadAlgoTemplate:
         payup: int,
         interval: int,
         lock: bool,
-        extra: dict
+        extra: dict,
     ) -> None:
         """"""
         self.algo_engine: "SpreadAlgoEngine" = algo_engine
@@ -52,12 +51,12 @@ class SpreadAlgoTemplate:
         else:
             self.target = -volume
 
-        self.status: Status = Status.NOTTRADED  # 算法状态
-        self.count: int = 0                     # 读秒计数
-        self.traded: float = 0                  # 成交数量
-        self.traded_volume: float = 0           # 成交数量（绝对值）
-        self.traded_price: float = 0            # 成交价格
-        self.stopped: bool = False              # 是否已被用户停止算法
+        self.status: Status = Status.NOTTRADED  # Algorithm status
+        self.count: int = 0  # Count of seconds
+        self.traded: float = 0  # Number of trades
+        self.traded_volume: float = 0  # Number of transactradestions (absolute value)
+        self.traded_price: float = 0  # Traded price
+        self.stopped: bool = False  # Whether the algorithm has been stopped by the user
 
         self.leg_traded: defaultdict = defaultdict(float)
         self.leg_cost: defaultdict = defaultdict(float)
@@ -66,10 +65,10 @@ class SpreadAlgoTemplate:
         self.order_trade_volume: defaultdict = defaultdict(int)
         self.orders: Dict[str, OrderData] = {}
 
-        self.write_log("算法已启动")
+        self.write_log("Algorithm activated")
 
     def get_item(self) -> AlgoItem:
-        """获取数据对象"""
+        """Get data object"""
         item: AlgoItem = AlgoItem(
             algoid=self.algoid,
             spread_name=self.spread_name,
@@ -81,19 +80,19 @@ class SpreadAlgoTemplate:
             traded_price=self.traded_price,
             interval=self.interval,
             count=self.count,
-            status=self.status
+            status=self.status,
         )
         return item
 
     def is_active(self) -> bool:
-        """判断算法是否处于运行中"""
+        """Determine if an algorithm is in operation."""
         if self.status not in [Status.CANCELLED, Status.ALLTRADED]:
             return True
         else:
             return False
 
     def is_order_finished(self) -> bool:
-        """检查委托是否全部结束"""
+        """Check that the order is fully closed."""
         finished: bool = True
 
         for leg in self.spread.legs.values():
@@ -106,7 +105,7 @@ class SpreadAlgoTemplate:
         return finished
 
     def is_hedge_finished(self) -> bool:
-        """检查当前各条腿是否平衡"""
+        """Check that the legs are currently balanced."""
         active_symbol: str = self.spread.active_leg.vt_symbol
         active_traded: float = self.leg_traded[active_symbol]
 
@@ -135,14 +134,10 @@ class SpreadAlgoTemplate:
         return finished
 
     def check_algo_cancelled(self) -> None:
-        """检查算法是否已停止"""
-        if (
-            self.stopped
-            and self.is_order_finished()
-            and self.is_hedge_finished()
-        ):
+        """Check if the algorithm has stopped."""
+        if self.stopped and self.is_order_finished() and self.is_hedge_finished():
             self.status = Status.CANCELLED
-            self.write_log("算法已停止")
+            self.write_log("The algorithm has stopped.")
             self.put_event()
 
     def stop(self) -> None:
@@ -150,7 +145,7 @@ class SpreadAlgoTemplate:
         if not self.is_active():
             return
 
-        self.write_log("算法停止中")
+        self.write_log("Algorithm stopped.")
         self.stopped = True
         self.cancel_all_order()
 
@@ -182,8 +177,7 @@ class SpreadAlgoTemplate:
         contract: Optional[ContractData] = self.get_contract(trade.vt_symbol)
 
         trade_volume = round_to(
-            self.order_trade_volume[order.vt_orderid],
-            contract.min_volume
+            self.order_trade_volume[order.vt_orderid], contract.min_volume
         )
 
         if trade_volume == order.volume:
@@ -191,12 +185,12 @@ class SpreadAlgoTemplate:
             if order.vt_orderid in vt_orderids:
                 vt_orderids.remove(order.vt_orderid)
 
-        msg: str = "委托成交[{}]，{}，{}，{}@{}".format(
+        msg: str = "Trading order [{}], {}, {}, {}@{}".format(
             trade.vt_orderid,
             trade.vt_symbol,
             trade.direction.value,
             trade.volume,
-            trade.price
+            trade.price,
         )
         self.write_log(msg)
 
@@ -213,15 +207,12 @@ class SpreadAlgoTemplate:
             if order.vt_orderid in vt_orderids:
                 vt_orderids.remove(order.vt_orderid)
 
-            msg: str = "委托{}[{}]".format(
-                order.status.value,
-                order.vt_orderid
-            )
+            msg: str = "Order {}[{}]".format(order.status.value, order.vt_orderid)
             self.write_log(msg)
 
         self.on_order(order)
 
-        # 如果在停止任务，则检查是否已经可以停止算法
+        # If the task is being stopped, check if it is already possible to stop the algorithm
         self.check_algo_cancelled()
 
     def update_timer(self) -> None:
@@ -247,10 +238,10 @@ class SpreadAlgoTemplate:
         price: float,
         volume: float,
         direction: Direction,
-        fak: bool = False
+        fak: bool = False,
     ) -> None:
         """"""
-        # 如果已经进入停止任务，禁止主动腿发单
+        # Prohibit active leg billing if already in a stop task
         if self.stopped and vt_symbol == self.spread.active_leg.vt_symbol:
             return
 
@@ -261,7 +252,7 @@ class SpreadAlgoTemplate:
         # Round order price to pricetick of contract
         price: float = round_to(price, leg.pricetick)
 
-        # 检查价格是否超过涨跌停板
+        # Check if the price exceeds the stop limit
         tick: Optional[TickData] = self.get_tick(vt_symbol)
 
         if direction == Direction.LONG and tick.limit_up:
@@ -271,23 +262,13 @@ class SpreadAlgoTemplate:
 
         # Otherwise send order
         vt_orderids: list = self.algo_engine.send_order(
-            self,
-            vt_symbol,
-            price,
-            volume,
-            direction,
-            self.lock,
-            fak
+            self, vt_symbol, price, volume, direction, self.lock, fak
         )
 
         self.leg_orders[vt_symbol].extend(vt_orderids)
 
-        msg: str = "发出委托[{}]，{}，{}，{}@{}".format(
-            "|".join(vt_orderids),
-            vt_symbol,
-            direction.value,
-            volume,
-            price
+        msg: str = "Issuance of orders [{}], {}, {}, {}@{}".format(
+            "|".join(vt_orderids), vt_symbol, direction.value, volume, price
         )
         self.write_log(msg)
 
@@ -314,7 +295,9 @@ class SpreadAlgoTemplate:
                 continue
 
             adjusted_leg_traded: float = leg_traded / trading_multiplier
-            adjusted_leg_traded: float = round_to(adjusted_leg_traded, spread.min_volume)
+            adjusted_leg_traded: float = round_to(
+                adjusted_leg_traded, spread.min_volume
+            )
 
             if adjusted_leg_traded > 0:
                 adjusted_leg_traded = floor_to(adjusted_leg_traded, spread.min_volume)
@@ -417,7 +400,7 @@ class SpreadStrategyTemplate:
         strategy_engine: "SpreadStrategyEngine",
         strategy_name: str,
         spread: SpreadData,
-        setting: dict
+        setting: dict,
     ) -> None:
         """"""
         self.strategy_engine: "SpreadStrategyEngine" = strategy_engine
@@ -583,7 +566,7 @@ class SpreadStrategyTemplate:
         payup: int,
         interval: int,
         lock: bool,
-        extra: dict
+        extra: dict,
     ) -> str:
         """"""
         if not self.trading:
@@ -598,7 +581,7 @@ class SpreadStrategyTemplate:
             payup,
             interval,
             lock,
-            extra
+            extra,
         )
 
         self.algoids.add(algoid)
@@ -612,15 +595,14 @@ class SpreadStrategyTemplate:
         payup: int,
         interval: int,
         lock: bool = False,
-        extra: dict = None
+        extra: dict = None,
     ) -> str:
         """"""
         if not extra:
             extra = {}
 
         return self.start_algo(
-            Direction.LONG, price, volume,
-            payup, interval, lock, extra
+            Direction.LONG, price, volume, payup, interval, lock, extra
         )
 
     def start_short_algo(
@@ -630,15 +612,14 @@ class SpreadStrategyTemplate:
         payup: int,
         interval: int,
         lock: bool = False,
-        extra: dict = None
+        extra: dict = None,
     ) -> str:
         """"""
         if not extra:
             extra = {}
 
         return self.start_algo(
-            Direction.SHORT, price, volume,
-            payup, interval, lock, extra
+            Direction.SHORT, price, volume, payup, interval, lock, extra
         )
 
     def stop_algo(self, algoid: str) -> None:
@@ -653,21 +634,37 @@ class SpreadStrategyTemplate:
         for algoid in list(self.algoids):
             self.stop_algo(algoid)
 
-    def buy(self, vt_symbol: str, price: float, volume: float, lock: bool = False) -> List[str]:
+    def buy(
+        self, vt_symbol: str, price: float, volume: float, lock: bool = False
+    ) -> List[str]:
         """"""
-        return self.send_order(vt_symbol, price, volume, Direction.LONG, Offset.OPEN, lock)
+        return self.send_order(
+            vt_symbol, price, volume, Direction.LONG, Offset.OPEN, lock
+        )
 
-    def sell(self, vt_symbol: str, price: float, volume: float, lock: bool = False) -> List[str]:
+    def sell(
+        self, vt_symbol: str, price: float, volume: float, lock: bool = False
+    ) -> List[str]:
         """"""
-        return self.send_order(vt_symbol, price, volume, Direction.SHORT, Offset.CLOSE, lock)
+        return self.send_order(
+            vt_symbol, price, volume, Direction.SHORT, Offset.CLOSE, lock
+        )
 
-    def short(self, vt_symbol: str, price: float, volume: float, lock: bool = False) -> List[str]:
+    def short(
+        self, vt_symbol: str, price: float, volume: float, lock: bool = False
+    ) -> List[str]:
         """"""
-        return self.send_order(vt_symbol, price, volume, Direction.SHORT, Offset.OPEN, lock)
+        return self.send_order(
+            vt_symbol, price, volume, Direction.SHORT, Offset.OPEN, lock
+        )
 
-    def cover(self, vt_symbol: str, price: float, volume: float, lock: bool = False) -> List[str]:
+    def cover(
+        self, vt_symbol: str, price: float, volume: float, lock: bool = False
+    ) -> List[str]:
         """"""
-        return self.send_order(vt_symbol, price, volume, Direction.LONG, Offset.CLOSE, lock)
+        return self.send_order(
+            vt_symbol, price, volume, Direction.LONG, Offset.CLOSE, lock
+        )
 
     def send_order(
         self,
@@ -676,20 +673,14 @@ class SpreadStrategyTemplate:
         volume: float,
         direction: Direction,
         offset: Offset,
-        lock: bool
+        lock: bool,
     ) -> List[str]:
         """"""
         if not self.trading:
             return []
 
         vt_orderids: List[str] = self.strategy_engine.send_order(
-            self,
-            vt_symbol,
-            price,
-            volume,
-            direction,
-            offset,
-            lock
+            self, vt_symbol, price, volume, direction, offset, lock
         )
 
         for vt_orderid in vt_orderids:
@@ -738,7 +729,9 @@ class SpreadStrategyTemplate:
 
         return leg.tick
 
-    def get_leg_pos(self, vt_symbol: str, direction: Direction = Direction.NET) -> Optional[float]:
+    def get_leg_pos(
+        self, vt_symbol: str, direction: Direction = Direction.NET
+    ) -> Optional[float]:
         """"""
         leg: LegData = self.spread.legs.get(vt_symbol, None)
 

@@ -6,7 +6,12 @@ from tzlocal import get_localzone_name
 from dataclasses import dataclass
 
 from vnpy.trader.object import (
-    HistoryRequest, TickData, PositionData, TradeData, ContractData, BarData
+    HistoryRequest,
+    TickData,
+    PositionData,
+    TradeData,
+    ContractData,
+    BarData,
 )
 from vnpy.trader.constant import Direction, Offset, Exchange, Interval, Status
 from vnpy.trader.utility import floor_to, ceil_to, round_to, extract_vt_symbol, ZoneInfo
@@ -41,7 +46,7 @@ class LegData:
         self.net_pos: float = 0
 
         self.last_price: float = 0
-        self.net_pos_price: float = 0       # Average entry price of net position
+        self.net_pos_price: float = 0  # Average entry price of net position
 
         # Tick data buf
         self.tick: TickData = None
@@ -144,7 +149,7 @@ class SpreadData:
         trading_multipliers: Dict[str, int],
         active_symbol: str,
         min_volume: float,
-        compile_formula: bool = True
+        compile_formula: bool = True,
     ) -> None:
         """"""
         self.name: str = name
@@ -251,21 +256,17 @@ class SpreadData:
 
             if trading_multiplier > 0:
                 adjusted_bid_volume: float = floor_to(
-                    leg_bid_volume / trading_multiplier,
-                    self.min_volume
+                    leg_bid_volume / trading_multiplier, self.min_volume
                 )
                 adjusted_ask_volume: float = floor_to(
-                    leg_ask_volume / trading_multiplier,
-                    self.min_volume
+                    leg_ask_volume / trading_multiplier, self.min_volume
                 )
             else:
                 adjusted_bid_volume: float = floor_to(
-                    leg_ask_volume / abs(trading_multiplier),
-                    self.min_volume
+                    leg_ask_volume / abs(trading_multiplier), self.min_volume
                 )
                 adjusted_ask_volume: float = floor_to(
-                    leg_bid_volume / abs(trading_multiplier),
-                    self.min_volume
+                    leg_bid_volume / abs(trading_multiplier), self.min_volume
                 )
 
             # For the first leg, just initialize
@@ -293,7 +294,7 @@ class SpreadData:
         return True
 
     def update_trade(self, trade: TradeData) -> None:
-        """更新委托成交"""
+        """Renewal of trade orders"""
         if trade.direction == Direction.LONG:
             self.leg_pos[trade.vt_symbol] += trade.volume
         else:
@@ -372,7 +373,7 @@ class SpreadData:
             ask_price_1=self.ask_price,
             bid_volume_1=self.bid_volume,
             ask_volume_1=self.ask_volume,
-            gateway_name="SPREAD"
+            gateway_name="SPREAD",
         )
         return tick
 
@@ -388,7 +389,7 @@ class SpreadData:
         return value
 
     def get_item(self) -> None:
-        """获取数据对象"""
+        """Getting data objects"""
         item: SpreadItem = SpreadItem(
             name=self.name,
             bid_volume=self.bid_volume,
@@ -404,8 +405,8 @@ class SpreadData:
 
 
 class EngineType(Enum):
-    LIVE = "实盘"
-    BACKTESTING = "回测"
+    LIVE = "Live"
+    BACKTESTING = "Backtesting"
 
 
 class BacktestingMode(Enum):
@@ -420,7 +421,7 @@ def load_bar_data(
     end: datetime,
     pricetick: float = 0,
     output: Callable = print,
-    backtesting: bool = False
+    backtesting: bool = False,
 ) -> List[BarData]:
     """"""
     database: BaseDatabase = get_database()
@@ -431,20 +432,18 @@ def load_bar_data(
     for vt_symbol in spread.legs.keys():
         symbol, exchange = extract_vt_symbol(vt_symbol)
 
-        # 初始化K线列表
+        # Initialize K-List
         bar_data: List[BarData] = []
 
-        # 只有实盘才优先尝试从数据服务查询
+        # Only live orders are prioritized to try to query from the data service
         if not backtesting:
             bar_data = query_bar_from_datafeed(
                 symbol, exchange, interval, start, end, output
             )
 
-        # 如果查询失败，则尝试从数据库中读取
+        # If the query fails, try to read from the database
         if not bar_data:
-            bar_data = database.load_bar_data(
-                symbol, exchange, interval, start, end
-            )
+            bar_data = database.load_bar_data(symbol, exchange, interval, start, end)
 
         bars: Dict[datetime, BarData] = {bar.datetime: bar for bar in bar_data}
         leg_bars[vt_symbol] = bars
@@ -462,10 +461,10 @@ def load_bar_data(
             leg_bar: Optional[BarData] = leg_bars[leg.vt_symbol].get(dt, None)
 
             if leg_bar:
-                # 缓存该腿当前的价格
+                # Cache the current price of the leg
                 leg_data[variable] = leg_bar.close_price
 
-                # 基于交易乘数累计价值
+                # Cumulative value based on transaction multipliers
                 trading_multiplier: int = spread.trading_multipliers[leg.vt_symbol]
                 spread_value += trading_multiplier * leg_bar.close_price
             else:
@@ -494,15 +493,11 @@ def load_bar_data(
 
 
 def load_tick_data(
-    spread: SpreadData,
-    start: datetime,
-    end: datetime
+    spread: SpreadData, start: datetime, end: datetime
 ) -> List[TickData]:
     """"""
     database: BaseDatabase = get_database()
-    return database.load_tick_data(
-        spread.name, Exchange.LOCAL, start, end
-    )
+    return database.load_tick_data(spread.name, Exchange.LOCAL, start, end)
 
 
 def query_bar_from_datafeed(
@@ -511,7 +506,7 @@ def query_bar_from_datafeed(
     interval: Interval,
     start: datetime,
     end: datetime,
-    output: Callable = print
+    output: Callable = print,
 ) -> List[BarData]:
     """
     Query bar data from RQData.
@@ -519,11 +514,7 @@ def query_bar_from_datafeed(
     datafeed: BaseDatafeed = get_datafeed()
 
     req: HistoryRequest = HistoryRequest(
-        symbol=symbol,
-        exchange=exchange,
-        interval=interval,
-        start=start,
-        end=end
+        symbol=symbol, exchange=exchange, interval=interval, start=start, end=end
     )
     data: List[BarData] = datafeed.query_bar_history(req, output)
     return data
@@ -531,7 +522,7 @@ def query_bar_from_datafeed(
 
 @dataclass
 class SpreadItem:
-    """价差数据容器"""
+    """Spread data container"""
 
     name: str
     bid_volume: int
@@ -546,7 +537,7 @@ class SpreadItem:
 
 @dataclass
 class AlgoItem:
-    """算法数据容器"""
+    """Algorithmic data container"""
 
     algoid: str
     spread_name: str
